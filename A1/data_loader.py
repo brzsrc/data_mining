@@ -56,9 +56,12 @@ class DataLoader:
 
     def print_output(self):
         for user_data in self.user_datas.values():
-            print(user_data.id)
+            print("=" * 30)
+            print("user_id:", user_data.id)
+            print("data sorted by timestamp:")
             for time, time_tbl in user_data.time_tbl.items():
                 print(time, time_tbl.items())
+            print("=" * 30)
 
 
     @staticmethod
