@@ -1,0 +1,6 @@
+.idea
+.venv
+**__pycache__**
+.DS_Store
+assignment/.DS_Store
+assignment/test.py
