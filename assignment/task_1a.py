@@ -137,7 +137,7 @@ class Task1A:
             # truncated_labels = [label.strftime('%m-%d') for label in record_count_mood.index]
             # print(truncated_labels)
             # ax.set_xticklabels(truncated_labels, rotation=45, ha="right")
-        plt.suptitle("Distribution of values of mood over dates")
+        plt.title("Distribution of values of mood over dates")
         plt.tight_layout()
         plt.show()
 
@@ -151,6 +151,11 @@ class Task1A:
     @classmethod
     def count_extreme_values_in_each_appCat(cls):
         df = cls.df[cls.df.variable.str.startswith('appCat')][["variable", "value"]]
+
+        for group, sdf in df.groupby(["variable"]):
+            count = sdf[sdf["value"] < 0].count()
+            print(f"{group}: {count}")
+
         total_cnt = df.groupby("variable")["value"].count().to_frame()
         total_cnt.rename(columns={"value": "total_cnt"}, inplace=True)
 
@@ -235,7 +240,23 @@ class Task1A:
 
     @classmethod
     def plot2(cls):
-        ...
+
+        df = cls.df
+        palette = plt.get_cmap('tab20')
+
+        num = 1
+        f = plt.figure(figsize=(30, 15))
+        for group, sdf in df.groupby(["variable"]):
+            ax = f.add_subplot(5, 4, num)
+            # print(sdf.head())
+            a = np.asarray(sdf.value.dropna())
+            # ax.hist(a, bins=50, color=palette(num))
+            ax.boxplot(a)
+            ax.set_title(str(group))
+            num += 1
+        plt.suptitle("Distribution of values of each variable")
+        plt.tight_layout()
+        plt.show()
 
     @classmethod
     def plot3(cls):
@@ -307,9 +328,10 @@ class Task1A:
         # cls.text()
         # cls.variables_distribution_of_values()
         # cls.plot1()
-        cls.data_relationships()
+        # cls.data_relationships()
         # cls.plot3()
-        # cls.count_extreme_values_in_each_appCat()
+        cls.count_extreme_values_in_each_appCat()
+        # cls.plot2()
 
     @classmethod
     def time_plot(cls):

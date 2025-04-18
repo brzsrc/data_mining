@@ -1,5 +1,6 @@
 from typing import List
 
+import numpy as np
 import seaborn as sns
 import pandas as pd
 from matplotlib import pyplot as plt
@@ -50,19 +51,19 @@ class Task1B:
         df = trimmed_data.drop(columns = ["id", "date", "average_mood"])
         df2 = trimmed_data[["id", "date", "average_mood"]].reset_index(drop=True)
         if method == 1:
-            imp_mean = IterativeImputer(random_state=0, n_nearest_features=3)
+            # imp_mean = IterativeImputer(random_state=0, n_nearest_features=3)
+            imp_mean = IterativeImputer(random_state=0)
             IterativeImputer(random_state=0)
             imputed = pd.DataFrame(imp_mean.fit_transform(df), columns=df.columns).reset_index(drop=True)
             combined_df = pd.concat([df2, imputed], axis=1, ignore_index=True)
             combined_df.columns = trimmed_data.columns
-            combined_df.to_csv('static/df_per_day_imputed_1.csv')
 
         else:
-            imputer = KNNImputer(n_neighbors=2)
+            # imputer = KNNImputer(n_neighbors=2)
+            imputer = KNNImputer()
             imputed = pd.DataFrame(imputer.fit_transform(df), columns=df.columns).reset_index(drop=True)
             combined_df = pd.concat([df2, imputed], axis=1, ignore_index=True)
             combined_df.columns = trimmed_data.columns
-            combined_df.to_csv('static/df_per_day_imputed_2.csv')
         return combined_df
 
     @staticmethod
@@ -75,16 +76,34 @@ class Task1B:
         # plt.savefig(f"static/figs/Correlation_Matrix_after.png", dpi=300)
         # plt.show()
         # plt.close()
-        imputed_data['total_professional'] = imputed_data[['total_office', 'total_finance']].sum(axis=1, skipna=True)
-        imputed_data['total_recreation'] = imputed_data[['total_game', 'total_entertainment', 'total_social']].sum(
-            axis=1, skipna=True)
-        imputed_data['total_convenience'] = imputed_data[['total_travel', 'total_utilities', 'total_weather']].sum(
-            axis=1, skipna=True)
-        imputed_data['total_other'] = imputed_data[['total_other', 'total_unknown']].sum(axis=1, skipna=True)
-        column_names = ['total_entertainment', 'total_finance', 'total_game', 'total_office', 'total_social',
-                        'total_travel', 'total_unknown', 'total_utilities', 'total_weather']
+
+        # imputed_data['total_professional'] = imputed_data[['total_office', 'total_finance']].sum(axis=1, skipna=True)
+        # imputed_data['total_recreation'] = imputed_data[['total_game', 'total_entertainment', 'total_social']].sum(
+        #     axis=1, skipna=True)
+        # imputed_data['total_convenience'] = imputed_data[['total_travel', 'total_utilities', 'total_weather']].sum(
+        #     axis=1, skipna=True)
+        # imputed_data['total_other'] = imputed_data[['total_other', 'total_unknown']].sum(axis=1, skipna=True)
+        # column_names = ['total_entertainment', 'total_finance', 'total_game', 'total_office', 'total_social',
+        #                 'total_travel', 'total_unknown', 'total_utilities', 'total_weather']
+
+        imputed_data['attr1'] = imputed_data[['total_game', 'total_office']].sum(axis=1, skipna=True)
+        imputed_data['attr2'] = imputed_data[['total_travel', 'total_utilities']].sum(axis=1, skipna=True)
+        imputed_data['attr3'] = imputed_data[['total_communication', 'total_screen', 'total_entertainment']].sum(axis=1, skipna=True)
+        imputed_data['attr4'] = imputed_data[['total_finance', 'total_weather', 'total_social', 'total_unknown']].sum(axis=1, skipna=True)
+        column_names = ['total_game', 'total_office', 'total_built_in', 'total_travel', 'total_utilities',
+                        'total_communication', 'total_screen', 'total_entertainment',
+                        'total_finance', 'total_weather', 'total_social', 'total_unknown']
+
         imputed_data = imputed_data.drop(columns=column_names, axis=1)
-        imputed_data.to_csv('static/df_per_day_agg.csv')
+
+        # df = imputed_data.drop(columns = ["id", "date", "group"])
+        # corr = df.corr('spearman')
+        # fig, ax = plt.subplots(figsize=(20, 10))
+        # sns.heatmap(corr, vmax=0.9, annot=True, cmap="Blues", square=True)
+        # plt.title("Correlation matrix of features")
+        # plt.show()
+        # plt.close()
+
         return imputed_data
 
     """remove incorrect values before we aggregate data by day"""
@@ -127,10 +146,25 @@ class Task1B:
     @staticmethod
     def remove_extreme_values(df: pd.DataFrame) -> pd.DataFrame:
         #clip to max 3 hours
-        df[df.filter(like='total') > 3600 * 8] = 3600 * 8
+        # df[df.filter(like='total') > 3600 * 8] = 3600 * 8
         # clip to max 3 hours
         # cond = df.variable.str.startswith("appCat")
         # df.loc[cond, "value"] = df.loc[cond, "value"].clip(upper=3600 * 3)
+
+        # print(df.loc[df['total_screen'] > 23000, 'total_screen'])
+        df.loc[df['total_screen'] > 23000, 'total_screen'] = 23000
+        df.loc[df["total_built_in"] > 15000, "total_built_in"] = 15000
+        df.loc[df["total_communication"] > 13000, "total_communication"] = 13000
+        df.loc[df["total_entertainment"] > 7000, "total_entertainment"] = 7000
+        df.loc[df["total_finance"] > 500, "total_finance"] = 500
+        df.loc[df["total_game"] > 3500, "total_game"] = 3500
+        df.loc[df["total_office"] > 6000, "total_office"] = 6000
+        df.loc[df["total_other"] > 1800, "total_other"] = 1800
+        df.loc[df["total_social"] > 8000, "total_social"] = 8000
+        df.loc[df["total_travel"] > 2000, "total_travel"] = 2000
+        df.loc[df["total_unknown"] > 1000, "total_unknown"] = 1000
+        df.loc[df["total_utilities"] > 1400, "total_utilities"] = 1400
+        df.loc[df["total_weather"] > 130, "total_weather"] = 130
         return df
 
     """
@@ -150,9 +184,6 @@ class Task1B:
         filtered_df = df.groupby('group').filter(lambda x: len(x) >= 6)
         # Drop helper columns
         filtered_df = filtered_df.drop(columns=['date_diff'])
-        # print(filtered_df)
-        filtered_df[["id", "date", "group", "average_mood"]].to_csv('static/df_per_day_trimmed.csv')
-        filtered_df.to_csv('static/df_per_day_trimmed_features.csv')
         return filtered_df
 
     """
@@ -161,14 +192,18 @@ class Task1B:
     @staticmethod
     def set_classes(df: pd.DataFrame) -> pd.DataFrame:
         # Define the bins and labels
-        labels = [1, 2, 3, 4, 5]  # Define the corresponding labels
-        quantiles = df['average_mood'].quantile([0.0, 0.2, 0.4, 0.6, 0.8, 1.0]).tolist()
-        # quantiles = df['average_mood'].quantile([0.0, 0.2, 0.4, 0.6, 0.8, 1.0]).tolist()
+        # labels = [1, 2, 3, 4, 5, 6, 7, 8, 9]  # Define the corresponding labels
+        labels = [1, 2, 3 ,4, 5]  # Define the corresponding labels
+        # quantiles = np.unique(df['average_mood'].quantile([0.0, 0.1, 0.2, 0.3, 0.4, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0]).to_numpy()).tolist()
+        # quantiles = df['average_mood'].quantile([0.0, 0.5, 1.0]).tolist()
+        quantiles = [3.0, 6.45, 6.9, 7.1, 7.59, 9.333333333333334]
+        # quantiles = [1, 4, 5, 7, 8, 10]
+        # print(quantiles)
 
         # Create a new column for categorized moods
         mood_class = pd.cut(df['average_mood'], bins=quantiles, labels=labels, include_lowest=True)
         df.insert(2, 'mood_class', mood_class)
-        df.to_csv("static/df_classes.csv")
+        df[['average_mood', "mood_class"]].to_csv('static/mood_class.csv')
         return df
 
     @staticmethod
@@ -202,6 +237,8 @@ class Task1B:
         final_df.dropna(inplace=True)
         final_df = self.set_classes(final_df)
         non_temporal_df = self.normalize_data(final_df)
+        non_temporal_unnormed_df = final_df
+        non_temporal_unnormed_df.to_csv('static/df_non_temporal_unnormed.csv')
         non_temporal_df.to_csv('static/df_non_temporal.csv')
 
     def get_temporal_data(self, df: pd.DataFrame):
@@ -211,11 +248,15 @@ class Task1B:
         final_df = self.set_classes(agg_data)
         group_df = final_df[["group"]]
         final_df.drop(columns= "group", inplace=True)
+
         norm_data = self.normalize_data(final_df)
+        unnormed_data = final_df
+
         norm_data.insert(2, "group", group_df)
+        unnormed_data.insert(2, "group", group_df)
+
         norm_data.to_csv('static/df_temporal.csv')
-
-
+        unnormed_data.to_csv('static/df_temporal_unnormed.csv')
 
 
     def get_values_per_day(self):
@@ -254,8 +295,8 @@ class Task1B:
             ).reset_index()
         )
         print("===" * 10)
-        result = self.remove_extreme_values(result)
-        result.to_csv('static/df_per_day.csv')
+        # result = self.remove_extreme_values(result)
+        result.to_csv('static/df_per_day_2.csv')
         print(result.to_string())
 
 
@@ -263,7 +304,9 @@ if __name__ == '__main__':
     df = DataLoader.load_to_df()
     task1B = Task1B()
     # task1B.get_values_per_day()
-    data_per_day = pd.read_csv('static/df_per_day.csv').drop(columns="Unnamed: 0")
+    data_per_day = pd.read_csv('static/df_per_day_2.csv').drop(columns="Unnamed: 0")
+    data_per_day = task1B.remove_extreme_values(data_per_day)
+    data_per_day.to_csv('static/df_per_day_3.csv')
     task1B.get_non_temporal_data(data_per_day)
     task1B.get_temporal_data(data_per_day)
     # df = Task1B.remove_incorrect_values

@@ -1,0 +1,108 @@
+Testing learning rate: 0.001, features in hidden layer 5, stacked LSTM 1
+Epoch: 0, train loss: 1.84452
+Epoch: 10, train loss: 1.89109
+Epoch: 20, train loss: 1.15788
+Epoch: 30, train loss: 0.90941
+Epoch: 40, train loss: 1.90267
+Epoch: 50, train loss: 1.62099
+Epoch: 60, train loss: 1.77710
+Epoch: 70, train loss: 1.90483
+Accuracy: 0.37755
+Test loss: 1.50428
+Accuracy: 0.37755
+Testing learning rate: 0.001, features in hidden layer 5, stacked LSTM 2
+Epoch: 0, train loss: 1.01286
+Epoch: 10, train loss: 1.90480
+Epoch: 20, train loss: 1.87478
+Epoch: 30, train loss: 1.30688
+Epoch: 40, train loss: 1.37299
+Epoch: 50, train loss: 1.38193
+Epoch: 60, train loss: 1.87590
+Epoch: 70, train loss: 1.73182
+Accuracy: 0.41837
+Test loss: 1.47406
+Accuracy: 0.41837
+Testing learning rate: 0.001, features in hidden layer 5, stacked LSTM 4
+Epoch: 0, train loss: 1.80538
+Epoch: 10, train loss: 1.84919
+Epoch: 20, train loss: 1.39179
+Epoch: 30, train loss: 1.90445
+Epoch: 40, train loss: 1.89375
+Epoch: 50, train loss: 1.83312
+Epoch: 60, train loss: 0.90810
+Epoch: 70, train loss: 1.90093
+Accuracy: 0.39796
+Test loss: 1.49747
+Accuracy: 0.39796
+Testing learning rate: 0.001, features in hidden layer 15, stacked LSTM 1
+Epoch: 0, train loss: 1.86950
+Epoch: 10, train loss: 0.90500
+Epoch: 20, train loss: 1.50355
+Epoch: 30, train loss: 1.33162
+Epoch: 40, train loss: 1.75466
+Epoch: 50, train loss: 0.90559
+Epoch: 60, train loss: 0.92360
+Epoch: 70, train loss: 0.90501
+Accuracy: 0.43878
+Test loss: 1.44964
+Accuracy: 0.43878
+Testing learning rate: 0.001, features in hidden layer 15, stacked LSTM 2
+Epoch: 0, train loss: 1.87845
+Epoch: 10, train loss: 0.90485
+Epoch: 20, train loss: 1.86961
+Epoch: 30, train loss: 1.50906
+Epoch: 40, train loss: 1.90389
+Epoch: 50, train loss: 1.81171
+Epoch: 60, train loss: 1.89792
+Epoch: 70, train loss: 1.46547
+Accuracy: 0.43878
+Test loss: 1.46234
+Accuracy: 0.43878
+Testing learning rate: 0.001, features in hidden layer 15, stacked LSTM 4
+Epoch: 0, train loss: 1.89154
+Epoch: 10, train loss: 1.74187
+Epoch: 20, train loss: 1.25026
+Epoch: 30, train loss: 1.82422
+Epoch: 40, train loss: 1.88551
+Epoch: 50, train loss: 1.75685
+Epoch: 60, train loss: 1.07448
+Epoch: 70, train loss: 1.32395
+Accuracy: 0.33673
+Test loss: 1.54521
+Accuracy: 0.33673
+Testing learning rate: 0.001, features in hidden layer 25, stacked LSTM 1
+Epoch: 0, train loss: 1.73122
+Epoch: 10, train loss: 1.38118
+Epoch: 20, train loss: 0.90483
+Epoch: 30, train loss: 1.83897
+Epoch: 40, train loss: 1.47580
+Epoch: 50, train loss: 0.90483
+Epoch: 60, train loss: 1.18564
+Epoch: 70, train loss: 0.90483
+Accuracy: 0.45918
+Test loss: 1.44123
+Accuracy: 0.45918
+Testing learning rate: 0.001, features in hidden layer 25, stacked LSTM 2
+Epoch: 0, train loss: 1.12555
+Epoch: 10, train loss: 1.38765
+Epoch: 20, train loss: 1.83830
+Epoch: 30, train loss: 0.91076
+Epoch: 40, train loss: 1.90388
+Epoch: 50, train loss: 0.90483
+Epoch: 60, train loss: 1.90483
+Epoch: 70, train loss: 0.90483
+Accuracy: 0.40816
+Test loss: 1.47472
+Accuracy: 0.40816
+Testing learning rate: 0.001, features in hidden layer 25, stacked LSTM 4
+Epoch: 0, train loss: 1.09406
+Epoch: 10, train loss: 1.55413
+Epoch: 20, train loss: 1.90221
+Epoch: 30, train loss: 1.90477
+Epoch: 40, train loss: 0.90483
+Epoch: 50, train loss: 1.34068
+Epoch: 60, train loss: 1.70653
+Epoch: 70, train loss: 1.14634
+Accuracy: 0.33673
+Test loss: 1.53162
+Accuracy: 0.33673

@@ -2,10 +2,16 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-from torch.utils.data import DataLoader, TensorDataset
+import math
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score, classification_report
+from torch.utils.data import DataLoader, TensorDataset, random_split
+import torch.nn.functional as F
 from typing import Tuple, List
 from torch.nn.utils.rnn import pad_sequence
 from sklearn.model_selection import train_test_split
+import datetime
+
+import torch.optim as optim
 
 
 def create_sequences(data: pd.DataFrame, labels: pd.DataFrame, seq_type: str) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -90,11 +96,14 @@ class LSTMRegression(nn.Module):
         return out
 
 
-def train_model(n_epochs, model, optimiser, loss_func, train_loader, test_loader):
+def train_model(n_epochs, model, optimiser, loss_func, train_loader, test_loader, save_path='result/train_loss.txt'):
     model.train()
     for epoch in range(n_epochs):
         # Training mode
         for inputs, label in train_loader:
+            # 把数据移动到 CUDA 上
+            inputs = inputs.to(device)
+            label = label.to(device)
             # Reset gradients
             optimiser.zero_grad()
             # Forward propagation
@@ -113,12 +122,14 @@ def train_model(n_epochs, model, optimiser, loss_func, train_loader, test_loader
         if epoch % 10 == 0:
             # print(f"Epoch: {epoch}, train loss: {loss.item():.5f}, test loss: {test_loss:.5f}")
             print(f"Epoch: {epoch}, train loss: {loss.item():.5f}")
+            with open(save_path, 'a') as f:
+                f.write(f"Epoch: {epoch}, train loss: {loss.item():.5f}\n")
             # print("Result std: "+str(np.std(np.array((10-1)*y_test+1))))
             # print("Prediction std: "+str(np.std(np.array((10-1)*test_preds+1))))
     return model
 
 
-def evaluate_model_classification(model, test_loader, loss_func) -> List:
+def evaluate_model_classification(model, test_loader, loss_func, save_path) -> List:
     prediction = []
     y_labels = []
     model.eval()
@@ -127,11 +138,15 @@ def evaluate_model_classification(model, test_loader, loss_func) -> List:
         test_loss = 0.0
         # Compute classes and losses
         for inputs, label in test_loader:
+            # 把数据移动到 CUDA 上
+            inputs = inputs.to(device)
+            label = label.to(device)
             outputs = model(inputs)
             loss = loss_func(outputs, label)
             test_loss += loss.item() * inputs.size(0)
-            prediction.append(outputs)
-            y_labels.append(label)
+            prediction.append(outputs.cpu())
+            y_labels.append(label.cpu())
+    
     test_loss /= len(test_loader.dataset)
     prediction = np.array([np.array(tensor) for tensor in prediction])
     y_labels = np.array([np.array(tensor) for tensor in y_labels]).flatten()
@@ -144,10 +159,39 @@ def evaluate_model_classification(model, test_loader, loss_func) -> List:
     equal_labels = pred_labels == y_labels
     accuracy = np.sum(equal_labels) / len(equal_labels)
     print(f"Accuracy: {accuracy:.5f}")
+
+    result_str = classification_report(y_labels, pred_labels)
+    # mae = mean_absolute_error(y_labels, pred_labels)
+    # mse = mean_squared_error(y_labels, pred_labels)
+    # rmse = math.sqrt(mse)
+    # # 格式化结果
+    # result_str = (
+    #     f"Test Loss : {test_loss:.6f}\n"
+    #     f"MSE       : {mse:.6f}\n"
+    #     f"MAE       : {mae:.6f}\n"
+    #     f"RMSE      : {rmse:.6f}\n"
+    #     f"Accuracy  : {accuracy:.6f}\n"
+    #
+    # )
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    result_str += f"Time      : {now}\n"
+
+    # 保存到本地文件
+    with open(save_path, 'a') as f:
+        f.write(result_str)
+    
+
+    # 保存预测结果和真实标签到 CSV
+    df_classification_result = pd.DataFrame({
+        'True': y_labels,
+        'Predicted': pred_labels
+    })
+    df_classification_result.to_csv('result/pred_vs_true_classification.csv', index=False)
+
     return [test_loss, pred_labels, y_labels]
 
 
-def evaluate_model_regression(model, test_loader, loss_func):
+def evaluate_model_regression(model, test_loader, loss_func, accuracy_threshold=0.1, save_path='result/evaluation_regression.txt',):
     prediction = []
     y_labels = []
     model.eval()
@@ -156,12 +200,55 @@ def evaluate_model_regression(model, test_loader, loss_func):
         test_loss = 0.0
         # Compute classes and losses
         for inputs, label in test_loader:
+            # 把数据移动到 CUDA 上
+            inputs = inputs.to(device)
+            label = label.to(device)
             outputs = model(inputs)
             loss = loss_func(outputs, label)
             test_loss += loss.item() * inputs.size(0)
             prediction.append(outputs)
             y_labels.append(label)
     test_loss /= len(test_loader.dataset)
+
+    # 合并所有 batch 的预测和标签
+    prediction = torch.cat(prediction).squeeze()
+    y_labels = torch.cat(y_labels).squeeze()
+
+    if prediction.dim() > 1 and prediction.size(1) > 1:
+        prediction = prediction[:, 0]
+
+    # 计算指标
+    mse = F.mse_loss(prediction, y_labels).item()
+    mae = F.l1_loss(prediction, y_labels).item()
+    rmse = torch.sqrt(F.mse_loss(prediction, y_labels)).item()
+    acc = (torch.abs(prediction - y_labels) < accuracy_threshold).float().mean().item()
+    r_squared = r2_score(y_labels, prediction)
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+    # 格式化结果
+    result_str = (
+        f"Test Loss : {test_loss:.6f}\n"
+        f"MSE       : {mse:.6f}\n"
+        f"MAE       : {mae:.6f}\n"
+        f"RMSE      : {rmse:.6f}\n"
+        f"Accuracy  : {acc:.6f} (Threshold={accuracy_threshold})\n"
+        f"R_Squared      : {r_squared:.6f}\n"
+        
+    )
+    result_str += f"Time      : {now}\n"
+
+    # 创建 DataFrame 保存预测值和真实值
+    df_result = pd.DataFrame({
+        'True': y_labels.cpu().numpy(),
+        'Predicted': prediction.cpu().numpy()
+    })
+
+    # 可选：保存为 CSV 文件，方便后续画图
+    df_result.to_csv('result/pred_vs_true_regression.csv', index=False)
+
+    # 保存到本地文件
+    with open(save_path, 'a') as f:
+        f.write(result_str)
 
 
 
@@ -171,12 +258,14 @@ def training_pipeline(train_loader: DataLoader, test_loader: DataLoader, model_t
     # Hidden_size 2, 4, 10, 15, 25, 35
     # Num layers 1, 2, 4,8
 
-    n_epochs = 80  # 1000 epochs
-    learning_rates = [0.001]
+    n_epochs = 100  # 1000 epochs
+    learning_rates = [0.0005]
 
-    input_size = 12  # number of features
-    hidden_sizes = [5, 15, 25]  # number of features in hidden state [5, 15, 25]
-    num_layers_list = [1, 2, 4]  # number of stacked lstm layers [1, 2, 4]
+    input_size = 10  # number of features
+    hidden_sizes = [25]  # number of features in hidden state [5, 15, 25]
+    num_layers_list = [2]  # number of stacked lstm layers [1, 2, 4]
+
+
 
     num_classes = 5  # number of output classes
 
@@ -187,72 +276,77 @@ def training_pipeline(train_loader: DataLoader, test_loader: DataLoader, model_t
                     f"Testing learning rate: {learning_rate}, features in hidden layer {hidden_size}, stacked LSTM {num_layers}")
 
                 if model_type == "regression":
-                    lstm_regression = LSTMRegression(num_classes, input_size, hidden_size, num_layers)
+                    save_path='result/evaluation_regression_n_epochs'+str(n_epochs)+'_hidden_sizes'+str(hidden_sizes)+'_num_layers_list'+str(num_layers_list)+'.txt'
+                    save_path_loss='result/loss_regression_n_epochs'+str(n_epochs)+'_hidden_sizes'+str(hidden_sizes)+'_num_layers_list'+str(num_layers_list)+'.txt'
+                    lstm_regression = LSTMRegression(num_classes, input_size, hidden_size, num_layers).to(device)
                     optimiser = torch.optim.Adam(lstm_regression.parameters(), lr=learning_rate)
                     loss_func = torch.nn.MSELoss()  # mean-squared error for regression
                     trained_model_regression = train_model(n_epochs=n_epochs, model=lstm_regression,
                                                            optimiser=optimiser,
                                                            loss_func=loss_func, train_loader=train_loader,
-                                                           test_loader=test_loader)
+                                                           test_loader=test_loader,
+                                                           save_path = save_path_loss)
+                    evaluate_model_regression(trained_model_regression, test_loader, loss_func,save_path = save_path)
                 else:
-                    lstm_classifier = LSTMClassifier(num_classes, input_size, hidden_size, num_layers)
+                    save_path='result/evaluation_classification_n_epochs'+str(n_epochs)+'_hidden_sizes'+str(hidden_sizes)+'_num_layers_list'+str(num_layers_list)+'.txt'
+                    save_path_loss='result/loss_classification_n_epochs'+str(n_epochs)+'_hidden_sizes'+str(hidden_sizes)+'_num_layers_list'+str(num_layers_list)+'.txt'
+                    lstm_classifier = LSTMClassifier(num_classes, input_size, hidden_size, num_layers).to(device)
                     optimiser = torch.optim.Adam(lstm_classifier.parameters(), lr=learning_rate)
                     loss_func = nn.CrossEntropyLoss()
                     trained_model_classification = train_model(n_epochs=n_epochs, model=lstm_classifier, optimiser=optimiser,
-                                    loss_func=loss_func, train_loader=train_loader, test_loader=test_loader)
-                    [test_loss, pred_labels, y_labels] = evaluate_model_classification(trained_model_classification, test_loader, loss_func)
+                                                                loss_func=loss_func, train_loader=train_loader,
+                                                                test_loader=test_loader,
+                                                                save_path = save_path_loss)
+                    
+                    [test_loss, pred_labels, y_labels] = evaluate_model_classification(trained_model_classification, test_loader, loss_func,save_path = save_path)
                     print(f"Test loss: {test_loss:.5f}")
                     equal_labels = pred_labels == y_labels
                     accuracy = np.sum(equal_labels) / len(equal_labels)
                     print(f"Accuracy: {accuracy:.5f}")
 
+def run_model(task_type: str, df: pd.DataFrame):
+    X = df.drop(columns=["Unnamed: 0", "id", "date", "mood_class", "average_mood"])
+
+    if task_type == "regression":
+        y = df[['group', 'average_mood']]
+
+        x_seq, y_seq = create_sequences(X, y, "regression")
+        train_size = int(0.75 * x_seq.size(0))
+        test_size = x_seq.size(0) - train_size
+        dataset = TensorDataset(x_seq, y_seq)
+
+        train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+        train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+        training_pipeline(train_loader, test_loader, "regression")
+    else:
+        y = df[['group', 'mood_class']]
+
+        x_seq, y_seq = create_sequences(X, y, "classification")
+        train_size = int(0.75 * x_seq.size(0))
+        test_size = x_seq.size(0) - train_size
+        dataset = TensorDataset(x_seq, y_seq)
+
+        train_dataset, test_dataset = random_split(dataset, [train_size, test_size])
+
+        train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
+        test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
+
+        training_pipeline(train_loader, test_loader, "classification")
 
 if __name__ == '__main__':
-    CSV_FILE = 'static/feature_engineering/df_temporal.csv'
+    # 检查CUDA是否可用
+    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    
+    CSV_FILE = 'static/df_temporal.csv'
     df = pd.read_csv(CSV_FILE)
+    # run_model(task_type="regression", df=df)
+    run_model(task_type="classification", df=df)
 
-    X = df.drop(columns=["Unnamed: 0", "id", "date", "mood_class", "average_mood"])
-    # print(X.head())
-    # y = df[['group', 'mood_class']]
-    #
-    # X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=32)
-    # # Create sequences for training and testing datasets
-    # train_sequences, train_targets = create_sequences(X_train, y_train, "classification")
-    # test_sequences, test_targets = create_sequences(X_test, y_test, "classification")
-    # # torch.Size([48, 39, 12]) torch.Size([48, 39]): 48 seqs, each seq has len 39, each cell in seq has 12 variables
-    # # print(train_sequences.size(), train_targets.size())
-    # #
-    # # print(test_targets)
-    # # print(train_targets)
-    #
-    # train_dataset = TensorDataset(train_sequences, train_targets)
-    # test_dataset = TensorDataset(test_sequences, test_targets)
-    #
-    # train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-    # test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-    #
-    # training_pipeline(train_loader, test_loader, "classification")
 
-    #regression
-    y = df[['group', 'average_mood']]
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=32)
-    # Create sequences for training and testing datasets
-    train_sequences, train_targets = create_sequences(X_train, y_train, "regression")
-    test_sequences, test_targets = create_sequences(X_test, y_test, "regression")
-    # torch.Size([48, 39, 12]) torch.Size([48, 39]): 48 seqs, each seq has len 39, each cell in seq has 12 variables
-    # print(train_sequences.size(), train_targets.size())
-    #
-    # print(test_targets)
-    # print(train_targets)
-
-    train_dataset = TensorDataset(train_sequences, train_targets)
-    test_dataset = TensorDataset(test_sequences, test_targets)
-
-    train_loader = DataLoader(train_dataset, batch_size=1, shuffle=True)
-    test_loader = DataLoader(test_dataset, batch_size=1, shuffle=False)
-
-    training_pipeline(train_loader, test_loader, "regression")
 
 
 
